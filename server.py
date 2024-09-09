@@ -45,9 +45,9 @@ class CommandResolver(BaseResolver):
         # Print the DNS query with timestamp and source IP
         print(f"{current_time} | {source_ip} | {chunk}")
         
-        # Return a fake IP address as a response (e.g., 127.0.0.1)
+        # Return a fake non existing IP address as a response (e.g., 0.0.0.0)
         reply = request.reply()
-        reply.add_answer(RR(qname, QTYPE.A, rdata=A("127.0.0.1"), ttl=300))
+        reply.add_answer(RR(qname, QTYPE.A, rdata=A("0.0.0.0"), ttl=300))
         return reply
 
     def decode_and_print(self, unique_id):
