@@ -2,6 +2,7 @@ import logging
 import threading
 import base64
 import argparse
+from datetime import datetime
 from dnslib import DNSRecord, QTYPE, RR, A
 from dnslib.server import DNSServer, BaseResolver, DNSLogger
 
@@ -12,6 +13,12 @@ class CommandResolver(BaseResolver):
         self.chunks = {}
 
     def resolve(self, request, handler):
+        # Get the current date and time
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Get the source IP address
+        source_ip = handler.address[0]
+        
         qname = str(request.q.qname).strip(".")
         qtype = QTYPE[request.q.qtype]
 
@@ -20,13 +27,13 @@ class CommandResolver(BaseResolver):
             unique_id = labels[0].split("start-")[1]
             chunk = labels[1]
             self.chunks[unique_id] = [chunk]
-            print(f"Start of new command with ID {unique_id}.")
+            print(f"{current_time} | {source_ip} | Start of new command with ID {unique_id}.")
         elif "end-" in labels[-1]:
             unique_id = labels[-1].split("end-")[1]
             chunk = labels[0]
             if unique_id in self.chunks:
                 self.chunks[unique_id].append(chunk)
-                print(f"End of command with ID {unique_id}. Attempting to decode...")
+                print(f"{current_time} | {source_ip} | End of command with ID {unique_id}. Attempting to decode...")
                 self.decode_and_print(unique_id)
         else:
             chunk = labels[0]
@@ -35,8 +42,8 @@ class CommandResolver(BaseResolver):
                     self.chunks[unique_id].append(chunk)
                     break
         
-        # Print the DNS query
-        print(f"{chunk}")
+        # Print the DNS query with timestamp and source IP
+        print(f"{current_time} | {source_ip} | {chunk}")
         
         # Return a fake IP address as a response (e.g., 127.0.0.1)
         reply = request.reply()
@@ -97,4 +104,3 @@ if __name__ == "__main__":
             pass
     except KeyboardInterrupt:
         print("\nStopping DNS server.")
-
