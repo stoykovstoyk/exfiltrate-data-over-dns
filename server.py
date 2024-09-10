@@ -43,7 +43,8 @@ class CommandResolver(BaseResolver):
                     break
         
         # Print the DNS query with timestamp and source IP
-        print(f"{current_time} | {source_ip} | {chunk}")
+        if source_ip != '127.0.0.1':
+            print(f"{current_time} | {source_ip} | {chunk}")
         
         # Return a fake non existing IP address as a response (e.g., 0.0.0.0)
         reply = request.reply()
