@@ -4,8 +4,9 @@ This project demonstrates a proof-of-concept for data exfiltration using DNS que
 
 ## Features
 
-- **Client Script (`client.py`)**: Encodes and sends commands to a vulnerable web application, which then exfiltrates data over DNS.
-- **Server Script (`server.py`)**: Receives the DNS queries, reassembles the exfiltrated data, and decodes it for analysis.
+- **Client Script (`client.py`)**: Encodes and sends commands to a vulnerable web application, which then can be used to exfiltrates data over DNS.
+- **Server Script (`server.py`)**: Receives the DNS queries and log the queries to be decoded later with dns-parser.py for analysis.
+- **DNS Exfiltrate Parser Script (`dns-parser.py`)**: Parses query logs to decode base32 or hex-encoded exfiltrated data.
 
 ## Prerequisites
 
